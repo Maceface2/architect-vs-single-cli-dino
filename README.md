@@ -61,7 +61,11 @@ If you want the shortest path through the planning, read `conductor-decisions.md
 
 ### 0. Architect Assistant drafted the canvas
 
-The canvas itself wasn't drawn by hand. Architect ships with an architecture-mode assistant that reads the project and writes `architect-canvas.json` directly. The user told the assistant *"build me the chrome dino game architecture"* and it produced the three zones, eleven components, and fifteen component edges visible in `architect-canvas.json`. This is the assistant flow described in Architect's CLAUDE.md (it edits the canvas via `ARCHITECT_CANVAS_UPDATE` blocks; live-reload picks up the changes). So the actual user workflow was:
+The canvas itself wasn't drawn by hand. Architect ships with an architecture-mode assistant that reads the project and writes `architect-canvas.json` directly. The user told the assistant *"make me an architecture for a chrome dino game"* and it produced the three zones, eleven components, and fifteen component edges visible in `architect-canvas.json`.
+
+![Architecture Assistant drafting the canvas from a one-line prompt](screenshots/01-architecture-assistant.png)
+
+This is the assistant flow described in Architect's CLAUDE.md (it edits the canvas via `ARCHITECT_CANVAS_UPDATE` blocks; live-reload picks up the changes). So the actual user workflow was:
 
 1. *(human, ~30 seconds)* — asked the Assistant to draft an architecture
 2. *(Assistant, one CLI session)* — wrote `architect-canvas.json`
@@ -69,6 +73,8 @@ The canvas itself wasn't drawn by hand. Architect ships with an architecture-mod
 4. *(three zone agents in parallel)* — built the system
 
 Steps 1–2 take the place of the hand-drawn canvas. The user never touches the JSON.
+
+![The resulting canvas — three zones with their components and the edges between them](screenshots/02-canvas.png)
 
 ### 1. Canvas → Conductor
 
@@ -103,6 +109,25 @@ Notice what's *not* there: no class names, no method names, no magic numbers, no
 ### 3. Parallel zone work + async contracts
 
 All three zones ran in parallel. Each zone published its API surface to `ARCHITECT/outputs/<zone>.md` so consumers could read the agreed shape — see `ARCHITECT/outputs/Entities-Agent.md` for the actual data contract Entities-Agent advertised. The Conductor only stepped in on `done` events to acknowledge progress, never to micromanage.
+
+Architect's Logs tab visualizes the dispatch as a swimlane — one column per participant, time flowing top-down:
+
+![Dispatch swimlane: Conductor assigns three tasks in parallel; each zone column tracks status changes and task receipts](screenshots/03-swimlane.png)
+
+Each zone has its own PTY tab in the Terminal view. Below are the three completion reports each zone wrote when it finished — the activity-line `done` content distilled from each zone's actual output:
+
+**Game-Logic-Agent — completion summary**
+![Game-Logic-Agent reports done: state machine, collision, difficulty manager, fixed 60Hz loop, plus a 25-test suite](screenshots/04-zone-game-logic.png)
+
+**Entities-Agent — completion summary**
+![Entities-Agent reports done: DinoController, ObstaclePool (20-slot), ObstacleGenerator with three height tiers + pterodactyls](screenshots/05-zone-entities.png)
+
+**Presentation-Agent — completion summary**
+![Presentation-Agent reports done: self-contained renderer, Web Audio SFX, day/night cycle at 700pts, 5-digit padded score](screenshots/06-zone-presentation.png)
+
+The Conductor saw these `done` events on the activity-log spine and produced the final user-facing summary:
+
+![Conductor's final summary listing what was built across the three zones](screenshots/07-conductor-final.png)
 
 The full sequence is in `ARCHITECT/runtime/<dispatchId>/activity/conductor.jsonl` (raw) and `architect/conductor-decisions.md` (readable). The Conductor emitted exactly four decisions across the whole build:
 
