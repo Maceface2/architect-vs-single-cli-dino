@@ -1,0 +1,259 @@
+{
+  "zones": [
+    {
+      "participantId": "Game-Logic-Agent",
+      "label": "Game Logic Agent",
+      "description": "Core game loop and state management",
+      "components": [
+        {
+          "label": "Game Loop",
+          "tag": "Core",
+          "description": "",
+          "specs": "Fixed-timestep requestAnimationFrame loop. Drives update() and render() each tick. Tracks delta time, pauses on visibility change."
+        },
+        {
+          "label": "Game State",
+          "tag": "State",
+          "description": "",
+          "specs": "State machine: IDLE → RUNNING → GAME_OVER. Holds score, hi-score (localStorage), speed multiplier, and frame count. Emits state change events."
+        },
+        {
+          "label": "Collision System",
+          "tag": "Physics",
+          "description": "",
+          "specs": "AABB collision between dino hitbox and obstacle hitboxes. Shrunk hitboxes (80% of sprite) for forgiving feel. Returns first collision or null."
+        },
+        {
+          "label": "Difficulty Manager",
+          "tag": "Balance",
+          "description": "",
+          "specs": "Increases game speed every 100 points. Adjusts obstacle spawn rate, gap variance, and introduces pterodactyls after 500 points."
+        }
+      ]
+    },
+    {
+      "participantId": "Entities-Agent",
+      "label": "Entities Agent",
+      "description": "Player and obstacle entity logic",
+      "components": [
+        {
+          "label": "Dino Controller",
+          "tag": "Player",
+          "description": "",
+          "specs": "Player entity. States: RUN, JUMP, DUCK, DEAD. Jump applies upward velocity; gravity constant pulls down. Sprite sheet animation driven by state. Exposes hitbox rect."
+        },
+        {
+          "label": "Obstacle Generator",
+          "tag": "Spawner",
+          "description": "",
+          "specs": "Spawns cacti (single/double/triple) and pterodactyls at randomized intervals. Gap between spawns derived from current speed and difficulty tier. Recycles from pool."
+        },
+        {
+          "label": "Obstacle Pool",
+          "tag": "Perf",
+          "description": "",
+          "specs": "Object pool of pre-allocated obstacle instances. Obstacles are reset and reused when they scroll off-screen. Avoids GC pressure during gameplay."
+        }
+      ]
+    },
+    {
+      "participantId": "Presentation-Agent",
+      "label": "Presentation Agent",
+      "description": "Rendering, UI, input, and audio",
+      "components": [
+        {
+          "label": "Canvas Renderer",
+          "tag": "Render",
+          "description": "",
+          "specs": "Clears and redraws each frame via Canvas 2D. Renders ground, dino sprite, obstacles, clouds, and score. Supports day/night cycle after 700 points."
+        },
+        {
+          "label": "Score Display",
+          "tag": "UI",
+          "description": "",
+          "specs": "Renders current score (padded to 5 digits) and hi-score in the top-right. Flashes score on new hi-score. Shows GAME OVER banner and restart prompt on death."
+        },
+        {
+          "label": "Input Handler",
+          "tag": "Input",
+          "description": "",
+          "specs": "Listens for Space/ArrowUp (jump), ArrowDown (duck), and tap/click (mobile). Translates raw events into game actions dispatched to Dino Controller and Game State."
+        },
+        {
+          "label": "Audio Manager",
+          "tag": "Audio",
+          "description": "",
+          "specs": "Web Audio API sound effects: jump whoosh, death crunch, score milestone chime. Lazy-initializes AudioContext on first user gesture to satisfy browser autoplay policy."
+        }
+      ]
+    }
+  ],
+  "unassignedComponents": [],
+  "componentEdges": [
+    {
+      "id": "edge-loop-state",
+      "sourceId": "comp-game-loop",
+      "sourceLabel": "Game Loop",
+      "sourceHandle": "source-right",
+      "targetId": "comp-game-state",
+      "targetLabel": "Game State",
+      "targetHandle": "target-left",
+      "direction": "source-to-target",
+      "label": "tick"
+    },
+    {
+      "id": "edge-loop-collision",
+      "sourceId": "comp-game-loop",
+      "sourceLabel": "Game Loop",
+      "sourceHandle": "source-bottom",
+      "targetId": "comp-collision",
+      "targetLabel": "Collision System",
+      "targetHandle": "target-top",
+      "direction": "source-to-target",
+      "label": "update"
+    },
+    {
+      "id": "edge-state-difficulty",
+      "sourceId": "comp-game-state",
+      "sourceLabel": "Game State",
+      "sourceHandle": "source-bottom",
+      "targetId": "comp-difficulty",
+      "targetLabel": "Difficulty Manager",
+      "targetHandle": "target-top",
+      "direction": "source-to-target",
+      "label": "score"
+    },
+    {
+      "id": "edge-difficulty-obstacles",
+      "sourceId": "comp-difficulty",
+      "sourceLabel": "Difficulty Manager",
+      "sourceHandle": "source-right",
+      "targetId": "comp-obstacle-gen",
+      "targetLabel": "Obstacle Generator",
+      "targetHandle": "target-left",
+      "direction": "source-to-target",
+      "label": "params"
+    },
+    {
+      "id": "edge-pool-gen",
+      "sourceId": "comp-obstacle-pool",
+      "sourceLabel": "Obstacle Pool",
+      "sourceHandle": "source-top",
+      "targetId": "comp-obstacle-gen",
+      "targetLabel": "Obstacle Generator",
+      "targetHandle": "target-bottom",
+      "direction": "bidirectional",
+      "label": "recycle"
+    },
+    {
+      "id": "edge-dino-collision",
+      "sourceId": "comp-dino",
+      "sourceLabel": "Dino Controller",
+      "sourceHandle": "source-left",
+      "targetId": "comp-collision",
+      "targetLabel": "Collision System",
+      "targetHandle": "target-right",
+      "direction": "source-to-target",
+      "label": "hitbox"
+    },
+    {
+      "id": "edge-obstacles-collision",
+      "sourceId": "comp-obstacle-gen",
+      "sourceLabel": "Obstacle Generator",
+      "sourceHandle": "source-left",
+      "targetId": "comp-collision",
+      "targetLabel": "Collision System",
+      "targetHandle": "target-right",
+      "direction": "source-to-target",
+      "label": "hitboxes"
+    },
+    {
+      "id": "edge-collision-state",
+      "sourceId": "comp-collision",
+      "sourceLabel": "Collision System",
+      "sourceHandle": "source-top",
+      "targetId": "comp-game-state",
+      "targetLabel": "Game State",
+      "targetHandle": "target-bottom",
+      "direction": "source-to-target",
+      "label": "hit"
+    },
+    {
+      "id": "edge-input-dino",
+      "sourceId": "comp-input",
+      "sourceLabel": "Input Handler",
+      "sourceHandle": "source-top",
+      "targetId": "comp-dino",
+      "targetLabel": "Dino Controller",
+      "targetHandle": "target-bottom",
+      "direction": "source-to-target",
+      "label": "action"
+    },
+    {
+      "id": "edge-input-state",
+      "sourceId": "comp-input",
+      "sourceLabel": "Input Handler",
+      "sourceHandle": "source-top",
+      "targetId": "comp-game-state",
+      "targetLabel": "Game State",
+      "targetHandle": "target-bottom",
+      "direction": "source-to-target",
+      "label": "restart"
+    },
+    {
+      "id": "edge-state-renderer",
+      "sourceId": "comp-game-state",
+      "sourceLabel": "Game State",
+      "sourceHandle": "source-bottom",
+      "targetId": "comp-renderer",
+      "targetLabel": "Canvas Renderer",
+      "targetHandle": "target-top",
+      "direction": "source-to-target",
+      "label": "game state"
+    },
+    {
+      "id": "edge-dino-renderer",
+      "sourceId": "comp-dino",
+      "sourceLabel": "Dino Controller",
+      "sourceHandle": "source-bottom",
+      "targetId": "comp-renderer",
+      "targetLabel": "Canvas Renderer",
+      "targetHandle": "target-top",
+      "direction": "source-to-target",
+      "label": "sprite/pos"
+    },
+    {
+      "id": "edge-obstacles-renderer",
+      "sourceId": "comp-obstacle-gen",
+      "sourceLabel": "Obstacle Generator",
+      "sourceHandle": "source-bottom",
+      "targetId": "comp-renderer",
+      "targetLabel": "Canvas Renderer",
+      "targetHandle": "target-top",
+      "direction": "source-to-target",
+      "label": "obstacle list"
+    },
+    {
+      "id": "edge-state-score",
+      "sourceId": "comp-game-state",
+      "sourceLabel": "Game State",
+      "sourceHandle": "source-bottom",
+      "targetId": "comp-score",
+      "targetLabel": "Score Display",
+      "targetHandle": "target-top",
+      "direction": "source-to-target",
+      "label": "score/state"
+    },
+    {
+      "id": "edge-state-audio",
+      "sourceId": "comp-game-state",
+      "sourceLabel": "Game State",
+      "sourceHandle": "source-bottom",
+      "targetId": "comp-audio",
+      "targetLabel": "Audio Manager",
+      "targetHandle": "target-top",
+      "direction": "source-to-target",
+      "label": "events"
+    }
+  ]
+}
